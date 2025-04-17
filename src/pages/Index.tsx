@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ChessBoard from '@/components/ChessBoard';
 import GameControls from '@/components/GameControls';
@@ -17,6 +16,14 @@ import {
   isStalemate,
   simulateMove
 } from '@/utils/chessUtils';
+
+import { createClient } from '@supabase/supabase-js';
+import { PlayerCompetition } from '@/types/supabase';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL, 
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 const Index = () => {
   // Estado do jogo
@@ -314,7 +321,45 @@ const Index = () => {
   };
   
   // Novo jogo após fim do jogo
-  const handleNewGame = () => {
+  const handleNewGame = async () => {
+    // Update player competition stats
+    if (gameState.isGameOver && players) {
+      try {
+        await Promise.all(
+          players.map(async (player) => {
+            if (player.isComputer) return;
+
+            // Determine game outcome
+            let updateData: Partial<PlayerCompetition> = {
+              total_games: 1,
+              last_played: new Date()
+            };
+
+            if (gameState.stalemate) {
+              updateData.draws = 1;
+            } else if (gameState.winner === player.color) {
+              updateData.wins = 1;
+            } else {
+              updateData.losses = 1;
+            }
+
+            // Update player stats
+            const { error } = await supabase
+              .from('player_competitions')
+              .update(updateData)
+              .eq('player_name', player.name);
+
+            if (error) {
+              console.error('Failed to update player stats:', error);
+            }
+          })
+        );
+      } catch (error) {
+        console.error('Error updating competition stats:', error);
+      }
+    }
+
+    // Reset game
     handleRestart();
     if (gameMode === 'players') {
       setGameStarted(false);

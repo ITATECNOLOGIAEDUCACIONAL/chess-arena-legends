@@ -5,6 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Player, PieceColor, GameMode } from '@/types/chess';
+import { createClient } from '@supabase/supabase-js';
+import { toast } from "@/components/ui/sonner";
+import { PlayerCompetition } from '@/types/supabase';
+
+// Initialize Supabase client (ensure these are your actual Supabase project URL and anon key)
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL, 
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 interface PlayerRegistrationProps {
   onPlayersSubmit: (players: [Player, Player]) => void;
@@ -18,23 +27,76 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
   const [whitePlayer, setWhitePlayer] = useState('Jogador 1');
   const [blackPlayer, setBlackPlayer] = useState(gameMode === 'computer' ? 'Computador' : 'Jogador 2');
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const players: [Player, Player] = [
-      {
-        name: whitePlayer || 'Jogador 1',
-        color: 'white',
-        isComputer: false
-      },
-      {
-        name: gameMode === 'computer' ? 'Computador' : (blackPlayer || 'Jogador 2'),
-        color: 'black',
-        isComputer: gameMode === 'computer'
-      }
-    ];
-    
-    onPlayersSubmit(players);
+    try {
+      // Prepare players data
+      const players: [Player, Player] = [
+        {
+          name: whitePlayer || 'Jogador 1',
+          color: 'white',
+          isComputer: false
+        },
+        {
+          name: gameMode === 'computer' ? 'Computador' : (blackPlayer || 'Jogador 2'),
+          color: 'black',
+          isComputer: gameMode === 'computer'
+        }
+      ];
+
+      // Save or update player competition data
+      const playerCompetitions: PlayerCompetition[] = await Promise.all(
+        players.map(async (player) => {
+          if (player.isComputer) return null;
+
+          // Check if player already exists
+          const { data: existingPlayer, error: fetchError } = await supabase
+            .from('player_competitions')
+            .select('*')
+            .eq('player_name', player.name)
+            .single();
+
+          if (fetchError && fetchError.code !== 'PGRST116') {
+            toast.error(`Erro ao buscar jogador: ${fetchError.message}`);
+            return null;
+          }
+
+          if (existingPlayer) {
+            return existingPlayer;
+          }
+
+          // Create new player record if not exists
+          const { data: newPlayer, error: insertError } = await supabase
+            .from('player_competitions')
+            .insert({
+              player_name: player.name,
+              game_mode: gameMode,
+              wins: 0,
+              losses: 0,
+              draws: 0,
+              total_games: 0,
+              last_played: new Date()
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            toast.error(`Erro ao criar jogador: ${insertError.message}`);
+            return null;
+          }
+
+          return newPlayer;
+        })
+      );
+
+      // Proceed with game start
+      onPlayersSubmit(players);
+      toast.success('Jogadores registrados com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao registrar jogadores');
+      console.error(error);
+    }
   };
   
   return (
