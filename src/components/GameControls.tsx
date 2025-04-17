@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Rotate, RotateCcw, BookOpen, User, Bot } from 'lucide-react';
+import { RotateCw, RotateCcw, BookOpen, User, Bot } from 'lucide-react';
 import { GameMode, PieceColor } from '@/types/chess';
 
 interface GameControlsProps {
@@ -68,7 +68,7 @@ const GameControls: React.FC<GameControlsProps> = ({
           className="flex-1 flex items-center justify-center gap-1" 
           onClick={onRestart}
         >
-          <Rotate size={18} />
+          <RotateCw size={18} />
           <span>Reiniciar</span>
         </Button>
       </div>
