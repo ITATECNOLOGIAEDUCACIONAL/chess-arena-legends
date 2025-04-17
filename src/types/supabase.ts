@@ -7,5 +7,5 @@ export interface PlayerCompetition {
   losses: number;
   draws: number;
   total_games: number;
-  last_played: Date;
+  last_played: Date | string;
 }

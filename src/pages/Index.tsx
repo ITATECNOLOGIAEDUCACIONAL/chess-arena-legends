@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import ChessBoard from '@/components/ChessBoard';
 import GameControls from '@/components/GameControls';
 import MoveHistory from '@/components/MoveHistory';
 import PlayerRegistration from '@/components/PlayerRegistration';
 import GameResult from '@/components/GameResult';
 import ChessRules from '@/components/ChessRules';
+import { Button } from '@/components/ui/button';
+import { Trophy } from 'lucide-react';
 
 import { toast } from "@/components/ui/sonner";
 import { ChessGameState, ChessMove, GameMode, PieceColor, Player } from '@/types/chess';
@@ -370,9 +373,17 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-200 py-8 px-4">
       <div className="container max-w-5xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-bold text-center mb-6 text-gray-800">
-          XadrezArena
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
+            XadrezArena
+          </h1>
+          <Link to="/leaderboard">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-chess-gold" />
+              Ver Classificação
+            </Button>
+          </Link>
+        </div>
         
         <div className="grid gap-8 md:grid-cols-[1fr_300px]">
           <div className="space-y-8">
