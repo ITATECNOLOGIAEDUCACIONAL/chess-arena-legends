@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				chess: {
+					'light-square': '#f0d9b5',
+					'dark-square': '#b58863',
+					'highlight': '#f7f769',
+					'move': '#829769',
+					'gold': '#d6a55c',
+					'wood': '#8b5a2b'
 				}
 			},
 			borderRadius: {
@@ -84,11 +93,23 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'piece-move': {
+					'0%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-5px)' },
+					'100%': { transform: 'translateY(0)' }
+				},
+				'capture-flash': {
+					'0%': { opacity: '1' },
+					'50%': { opacity: '0.5' },
+					'100%': { opacity: '1' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'piece-move': 'piece-move 0.3s ease-in-out',
+				'capture-flash': 'capture-flash 0.5s ease-in-out'
 			}
 		}
 	},
