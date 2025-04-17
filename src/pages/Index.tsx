@@ -6,8 +6,9 @@ import MoveHistory from '@/components/MoveHistory';
 import PlayerRegistration from '@/components/PlayerRegistration';
 import GameResult from '@/components/GameResult';
 import ChessRules from '@/components/ChessRules';
+import Authentication from '@/components/Authentication';
 import { Button } from '@/components/ui/button';
-import { Trophy } from 'lucide-react';
+import { Trophy, LogOut } from 'lucide-react';
 
 import { toast } from "@/components/ui/sonner";
 import { ChessGameState, ChessMove, GameMode, PieceColor, Player } from '@/types/chess';
@@ -22,6 +23,7 @@ import {
 
 import { createClient } from '@supabase/supabase-js';
 import { PlayerCompetition } from '@/types/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL, 
@@ -29,6 +31,9 @@ const supabase = createClient(
 );
 
 const Index = () => {
+  // Auth state
+  const { user, signOut } = useAuth();
+  
   // Estado do jogo
   const [gameState, setGameState] = useState<ChessGameState>({
     board: createInitialBoard(),
@@ -370,6 +375,13 @@ const Index = () => {
     }
   };
 
+  // Handle authentication change
+  const handleAuthChange = (authUser: any) => {
+    if (authUser) {
+      toast.success(`Bem-vindo, ${authUser.email?.split('@')[0]}!`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-200 py-8 px-4">
       <div className="container max-w-5xl mx-auto">
@@ -377,24 +389,39 @@ const Index = () => {
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
             XadrezArena
           </h1>
-          <Link to="/leaderboard">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-chess-gold" />
-              Ver Classificação
-            </Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            {user && (
+              <div className="text-sm mr-4">
+                Olá, <span className="font-semibold">{user.email?.split('@')[0]}</span>
+              </div>
+            )}
+            
+            {user ? (
+              <Button variant="outline" size="sm" onClick={signOut} className="mr-3">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
+            ) : null}
+            
+            <Link to="/leaderboard">
+              <Button variant="outline" className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-amber-500" />
+                Ver Classificação
+              </Button>
+            </Link>
+          </div>
         </div>
         
         <div className="grid gap-8 md:grid-cols-[1fr_300px]">
           <div className="space-y-8">
-            {!gameStarted && (
+            {!user ? (
+              <Authentication onAuthChange={handleAuthChange} />
+            ) : !gameStarted ? (
               <PlayerRegistration 
                 onPlayersSubmit={handlePlayersSubmit} 
                 gameMode={gameMode} 
               />
-            )}
-            
-            {gameStarted && (
+            ) : (
               <>
                 {gameState.isGameOver ? (
                   <GameResult 
@@ -430,14 +457,16 @@ const Index = () => {
           </div>
           
           <div className="space-y-6">
-            <GameControls 
-              currentPlayer={gameState.currentPlayer}
-              onRestart={handleRestart}
-              onUndo={handleUndo}
-              gameMode={gameMode}
-              setGameMode={handleChangeGameMode}
-              onShowRules={() => setShowRules(true)}
-            />
+            {user && (
+              <GameControls 
+                currentPlayer={gameState.currentPlayer}
+                onRestart={handleRestart}
+                onUndo={handleUndo}
+                gameMode={gameMode}
+                setGameMode={handleChangeGameMode}
+                onShowRules={() => setShowRules(true)}
+              />
+            )}
             
             {gameStarted && (
               <MoveHistory moves={gameState.moveHistory} />

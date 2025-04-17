@@ -8,4 +8,5 @@ export interface PlayerCompetition {
   draws: number;
   total_games: number;
   last_played: Date | string;
+  user_id?: string | null;
 }

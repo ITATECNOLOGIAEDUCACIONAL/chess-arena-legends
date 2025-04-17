@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,8 +8,9 @@ import { Player, PieceColor, GameMode } from '@/types/chess';
 import { createClient } from '@supabase/supabase-js';
 import { toast } from "@/components/ui/sonner";
 import { PlayerCompetition } from '@/types/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Initialize Supabase client (ensure these are your actual Supabase project URL and anon key)
+// Initialize Supabase client
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL, 
   import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -24,8 +25,20 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
   onPlayersSubmit,
   gameMode
 }) => {
-  const [whitePlayer, setWhitePlayer] = useState('Jogador 1');
-  const [blackPlayer, setBlackPlayer] = useState(gameMode === 'computer' ? 'Computador' : 'Jogador 2');
+  const { user } = useAuth();
+  const [whitePlayer, setWhitePlayer] = useState('');
+  const [blackPlayer, setBlackPlayer] = useState('');
+  
+  // Set defaults when user changes
+  useEffect(() => {
+    if (user) {
+      setWhitePlayer(user.email?.split('@')[0] || 'Jogador 1');
+    } else {
+      setWhitePlayer('Jogador 1');
+    }
+    
+    setBlackPlayer(gameMode === 'computer' ? 'Computador' : 'Jogador 2');
+  }, [user, gameMode]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,12 +49,14 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
         {
           name: whitePlayer || 'Jogador 1',
           color: 'white',
-          isComputer: false
+          isComputer: false,
+          userId: user?.id
         },
         {
           name: gameMode === 'computer' ? 'Computador' : (blackPlayer || 'Jogador 2'),
           color: 'black',
-          isComputer: gameMode === 'computer'
+          isComputer: gameMode === 'computer',
+          userId: gameMode === 'computer' ? null : user?.id
         }
       ];
 
@@ -76,7 +91,8 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
               losses: 0,
               draws: 0,
               total_games: 0,
-              last_played: new Date()
+              last_played: new Date(),
+              user_id: player.userId
             })
             .select()
             .single();

@@ -1,4 +1,3 @@
-
 export type PieceType = 'pawn' | 'rook' | 'knight' | 'bishop' | 'queen' | 'king';
 export type PieceColor = 'white' | 'black';
 
@@ -43,6 +42,7 @@ export interface Player {
   name: string;
   color: PieceColor;
   isComputer: boolean;
+  userId?: string | null;
 }
 
 export type GameMode = 'players' | 'computer';
