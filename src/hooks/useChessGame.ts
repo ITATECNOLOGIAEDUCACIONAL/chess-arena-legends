@@ -13,10 +13,18 @@ import { toast } from "@/components/ui/sonner";
 import { createClient } from '@supabase/supabase-js';
 import { PlayerCompetition } from '@/types/supabase';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL, 
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+// Valores de fallback para desenvolvimento
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+
+// Log para depuração
+console.log('Supabase config in useChessGame:', {
+  url: SUPABASE_URL,
+  hasKey: !!SUPABASE_ANON_KEY
+});
+
+// Initialize Supabase client com valores seguros
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const useChessGame = (gameMode: GameMode, players: [Player, Player] | null) => {
   // Game state
@@ -308,19 +316,25 @@ export const useChessGame = (gameMode: GameMode, players: [Player, Player] | nul
               updateData.losses = 1;
             }
 
-            // Update player stats
-            const { error } = await supabase
-              .from('player_competitions')
-              .update(updateData)
-              .eq('player_name', player.name);
+            try {
+              // Update player stats
+              const { error } = await supabase
+                .from('player_competitions')
+                .update(updateData)
+                .eq('player_name', player.name);
 
-            if (error) {
-              console.error('Failed to update player stats:', error);
+              if (error) {
+                console.error('Failed to update player stats:', error);
+              }
+            } catch (supabaseError) {
+              console.error('Supabase operation failed:', supabaseError);
+              // Continue with game reset even if stats update fails
             }
           })
         );
       } catch (error) {
         console.error('Error updating competition stats:', error);
+        // Don't block the game reset if there's an error updating stats
       }
     }
 
