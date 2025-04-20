@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/sonner";
 import { User } from '@supabase/supabase-js';
-import { Eye, EyeOff, User as UserIcon } from 'lucide-react';
+import { Eye, EyeOff, User as UserIcon, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface AuthProps {
   onAuthChange: (user: User | null) => void;
@@ -20,15 +21,37 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
+
+  const testSupabaseConnection = async () => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      setConnectionError(false);
+      return true;
+    } catch (error) {
+      console.error('Erro ao testar conexão com Supabase:', error);
+      setConnectionError(true);
+      return false;
+    }
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    // Cria um email temporário baseado no nome do usuário se não fornecido
-    const userEmail = email || `${username.replace(/\s+/g, '').toLowerCase()}@xadrezarena.temp`;
-
+    
     try {
+      // Teste a conexão primeiro
+      const isConnected = await testSupabaseConnection();
+      if (!isConnected) {
+        toast.error('Não foi possível conectar ao servidor. Verifique sua conexão com a internet.');
+        setLoading(false);
+        return;
+      }
+
+      // Cria um email temporário baseado no nome do usuário se não fornecido
+      const userEmail = email || `${username.replace(/\s+/g, '').toLowerCase()}@xadrezarena.temp`;
+
       const { data, error } = await supabase.auth.signUp({
         email: userEmail,
         password,
@@ -40,14 +63,15 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
       });
 
       if (error) {
+        console.error('Erro detalhado:', error);
         toast.error(`Erro no registro: ${error.message}`);
       } else {
         toast.success('Registro realizado com sucesso! Você já pode jogar.');
         onAuthChange(data.user);
       }
     } catch (error) {
-      console.error('Signup error:', error);
-      toast.error('Erro ao tentar registrar. Tente novamente mais tarde.');
+      console.error('Erro no registro:', error);
+      toast.error('Erro ao tentar conectar com o servidor. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
@@ -58,6 +82,14 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
     setLoading(true);
 
     try {
+      // Teste a conexão primeiro
+      const isConnected = await testSupabaseConnection();
+      if (!isConnected) {
+        toast.error('Não foi possível conectar ao servidor. Verifique sua conexão com a internet.');
+        setLoading(false);
+        return;
+      }
+
       // Verifica se o usuário forneceu um email completo ou apenas um nome de usuário
       const loginIdentifier = email.includes('@') ? email : `${email.replace(/\s+/g, '').toLowerCase()}@xadrezarena.temp`;
 
@@ -67,14 +99,15 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
       });
 
       if (error) {
+        console.error('Erro detalhado:', error);
         toast.error(`Erro no login: ${error.message}`);
       } else {
         toast.success('Login realizado com sucesso!');
         onAuthChange(data.user);
       }
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Erro ao tentar fazer login. Tente novamente mais tarde.');
+      console.error('Erro no login:', error);
+      toast.error('Erro ao tentar conectar com o servidor. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
@@ -89,6 +122,16 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {connectionError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Problema de conexão</AlertTitle>
+            <AlertDescription>
+              Não foi possível conectar ao servidor. O jogo continuará funcionando, mas suas estatísticas não serão salvas.
+            </AlertDescription>
+          </Alert>
+        )}
+      
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Entrar</TabsTrigger>

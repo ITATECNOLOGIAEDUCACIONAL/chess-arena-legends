@@ -9,6 +9,8 @@ import { toast } from "@/components/ui/sonner";
 import { PlayerCompetition } from '@/types/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { AlertTriangle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface PlayerRegistrationProps {
   onPlayersSubmit: (players: [Player, Player]) => void;
@@ -19,9 +21,10 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
   onPlayersSubmit,
   gameMode
 }) => {
-  const { user } = useAuth();
+  const { user, connectionError } = useAuth();
   const [whitePlayer, setWhitePlayer] = useState('');
   const [blackPlayer, setBlackPlayer] = useState('');
+  const [registrationFailed, setRegistrationFailed] = useState(false);
   
   // Set defaults when user changes
   useEffect(() => {
@@ -53,6 +56,13 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
           userId: gameMode === 'computer' ? null : user?.id
         }
       ];
+
+      // If we have connection issues, skip database operations
+      if (connectionError) {
+        toast.warning('Jogando sem salvar estatísticas devido a problemas de conexão');
+        onPlayersSubmit(players);
+        return;
+      }
 
       // Save or update player competition data
       const playerCompetitions: PlayerCompetition[] = await Promise.all(
@@ -99,7 +109,7 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
             return newPlayer;
           } catch (error) {
             console.error('Erro ao processar jogador:', error);
-            toast.error(`Erro ao registrar jogador ${player.name}`);
+            setRegistrationFailed(true);
             return null;
           }
         })
@@ -113,11 +123,13 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
         onPlayersSubmit(players);
         toast.success('Jogadores registrados com sucesso!');
       } else {
+        setRegistrationFailed(true);
         toast.error('Falha ao registrar jogadores no banco de dados, mas o jogo continuará.');
         onPlayersSubmit(players);
       }
     } catch (error) {
       console.error('Erro ao registrar jogadores:', error);
+      setRegistrationFailed(true);
       toast.error('Erro ao conectar com o banco de dados. O jogo continuará sem salvar estatísticas.');
       
       // Allow the game to continue anyway
@@ -147,6 +159,16 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {(connectionError || registrationFailed) && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Problema de conexão</AlertTitle>
+              <AlertDescription>
+                Não foi possível conectar ao servidor. O jogo continuará funcionando, mas suas estatísticas não serão salvas.
+              </AlertDescription>
+            </Alert>
+          )}
+        
           <div className="space-y-2">
             <Label htmlFor="whitePlayer">Jogador das Peças Brancas</Label>
             <Input
