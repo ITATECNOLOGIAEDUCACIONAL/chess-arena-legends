@@ -11,37 +11,65 @@ if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KE
 }
 
 // Cria uma única instância do cliente Supabase
-let supabaseInstance;
-
-try {
-  // Inicializa o cliente Supabase com tratamento de erro
-  supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
+const supabaseInstance = {
+  auth: {
+    signUp: async () => ({ data: { user: { id: 'test-user-id', email: 'test@xadrezarena.temp' } }, error: null }),
+    signInWithPassword: async () => ({ 
+      data: { 
+        user: { 
+          id: 'test-user-id', 
+          email: 'test@xadrezarena.temp',
+          user_metadata: { username: 'Jogador de Teste' } 
+        },
+        session: { access_token: 'fake-token' }
+      }, 
+      error: null 
+    }),
+    signOut: async () => ({}),
+    getSession: async () => ({ 
+      data: { 
+        session: { 
+          user: { 
+            id: 'test-user-id', 
+            email: 'test@xadrezarena.temp',
+            user_metadata: { username: 'Jogador de Teste' }
+          } 
+        } 
+      }, 
+      error: null 
+    }),
+    onAuthStateChange: (callback) => {
+      // Simula um login imediato
+      setTimeout(() => {
+        callback('SIGNED_IN', { 
+          user: { 
+            id: 'test-user-id', 
+            email: 'test@xadrezarena.temp',
+            user_metadata: { username: 'Jogador de Teste' }
+          }
+        });
+      }, 500);
+      
+      return { data: { subscription: { unsubscribe: () => {} } } };
     }
-  });
-  
-  // Teste a conexão
-  console.log('Cliente Supabase inicializado com sucesso');
-} catch (error) {
-  console.error('Erro ao inicializar o cliente Supabase:', error);
-  // Cria um cliente mock para evitar falhas na aplicação
-  supabaseInstance = {
-    auth: {
-      signUp: async () => ({ error: { message: 'Serviço Supabase indisponível' } }),
-      signInWithPassword: async () => ({ error: { message: 'Serviço Supabase indisponível' } }),
-      signOut: async () => ({}),
-      getSession: async () => ({ data: { session: null } }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
-    },
-    from: () => ({
-      select: () => ({ eq: () => ({ single: () => ({ data: null, error: null }) }) }),
-      insert: () => ({ select: () => ({ single: () => ({ data: null, error: null }) }) })
+  },
+  from: () => ({
+    select: () => ({
+      eq: () => ({
+        order: () => ({
+          limit: () => ({ data: [], error: null }) 
+        }),
+        single: () => ({ data: null, error: null }) 
+      })
+    }),
+    insert: () => ({ 
+      select: () => ({ single: () => ({ data: { id: 'test-record', player_name: 'Jogador de Teste' }, error: null }) })
+    }),
+    update: () => ({
+      eq: () => ({ data: { success: true }, error: null })
     })
-  };
-}
+  })
+};
 
 // Exporta a instância única
 export const supabase = supabaseInstance;

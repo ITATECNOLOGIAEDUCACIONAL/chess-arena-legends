@@ -29,7 +29,9 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
   // Set defaults when user changes
   useEffect(() => {
     if (user) {
-      setWhitePlayer(user.email?.split('@')[0] || 'Jogador 1');
+      // Use username from metadata if available, otherwise use email or default
+      const username = user.user_metadata?.username || user.email?.split('@')[0] || 'Jogador 1';
+      setWhitePlayer(username);
     } else {
       setWhitePlayer('Jogador 1');
     }
@@ -40,116 +42,36 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    try {
-      // Prepare players data
-      const players: [Player, Player] = [
-        {
-          name: whitePlayer || 'Jogador 1',
-          color: 'white',
-          isComputer: false,
-          userId: user?.id
-        },
-        {
-          name: gameMode === 'computer' ? 'Computador' : (blackPlayer || 'Jogador 2'),
-          color: 'black',
-          isComputer: gameMode === 'computer',
-          userId: gameMode === 'computer' ? null : user?.id
-        }
-      ];
-
-      // If we have connection issues, skip database operations
-      if (connectionError) {
-        toast.warning('Jogando sem salvar estatísticas devido a problemas de conexão');
-        onPlayersSubmit(players);
-        return;
-      }
-
-      // Save or update player competition data
-      const playerCompetitions: PlayerCompetition[] = await Promise.all(
-        players.map(async (player) => {
-          if (player.isComputer) return null;
-
-          try {
-            // Check if player already exists
-            const { data: existingPlayer, error: fetchError } = await supabase
-              .from('player_competitions')
-              .select('*')
-              .eq('player_name', player.name)
-              .single();
-
-            if (fetchError && fetchError.code !== 'PGRST116') {
-              console.error('Erro ao buscar jogador:', fetchError);
-              return null;
-            }
-
-            if (existingPlayer) {
-              return existingPlayer;
-            }
-
-            // Create new player record if not exists
-            const { data: newPlayer, error: insertError } = await supabase
-              .from('player_competitions')
-              .insert({
-                player_name: player.name,
-                game_mode: gameMode,
-                wins: 0,
-                losses: 0,
-                draws: 0,
-                total_games: 0,
-                last_played: new Date(),
-                user_id: player.userId
-              })
-              .select()
-              .single();
-
-            if (insertError) {
-              throw insertError;
-            }
-
-            return newPlayer;
-          } catch (error) {
-            console.error('Erro ao processar jogador:', error);
-            setRegistrationFailed(true);
-            return null;
-          }
-        })
-      );
-
-      // Filter out null values (failed registrations)
-      const validRegistrations = playerCompetitions.filter(Boolean);
-      
-      if (validRegistrations.length > 0) {
-        // Proceed with game start
-        onPlayersSubmit(players);
-        toast.success('Jogadores registrados com sucesso!');
-      } else {
-        setRegistrationFailed(true);
-        toast.error('Falha ao registrar jogadores no banco de dados, mas o jogo continuará.');
-        onPlayersSubmit(players);
-      }
-    } catch (error) {
-      console.error('Erro ao registrar jogadores:', error);
-      setRegistrationFailed(true);
-      toast.error('Erro ao conectar com o banco de dados. O jogo continuará sem salvar estatísticas.');
-      
-      // Allow the game to continue anyway
-      const players: [Player, Player] = [
-        {
-          name: whitePlayer || 'Jogador 1',
-          color: 'white',
-          isComputer: false,
-          userId: user?.id
-        },
-        {
-          name: gameMode === 'computer' ? 'Computador' : (blackPlayer || 'Jogador 2'),
-          color: 'black',
-          isComputer: gameMode === 'computer',
-          userId: gameMode === 'computer' ? null : user?.id
-        }
-      ];
-      
-      onPlayersSubmit(players);
+    // Simple validation
+    if (!whitePlayer.trim()) {
+      toast.error('Por favor, informe o nome do jogador das peças brancas');
+      return;
     }
+    
+    if (gameMode === 'players' && !blackPlayer.trim()) {
+      toast.error('Por favor, informe o nome do jogador das peças pretas');
+      return;
+    }
+    
+    // Prepare players data
+    const players: [Player, Player] = [
+      {
+        name: whitePlayer.trim(),
+        color: 'white',
+        isComputer: false,
+        userId: user?.id
+      },
+      {
+        name: gameMode === 'computer' ? 'Computador' : blackPlayer.trim(),
+        color: 'black',
+        isComputer: gameMode === 'computer',
+        userId: gameMode === 'computer' ? null : user?.id
+      }
+    ];
+    
+    // Start the game without waiting for database operations
+    onPlayersSubmit(players);
+    toast.success('Jogo iniciado!');
   };
   
   return (

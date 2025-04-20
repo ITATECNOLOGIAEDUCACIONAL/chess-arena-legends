@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,39 +16,43 @@ interface AuthProps {
 }
 
 const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState('Jogador de Teste');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState('123456');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
 
-  const testSupabaseConnection = async () => {
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) throw error;
-      setConnectionError(false);
-      return true;
-    } catch (error) {
-      console.error('Erro ao testar conexão com Supabase:', error);
-      setConnectionError(true);
-      return false;
-    }
-  };
+  // Auto login after component mount
+  useEffect(() => {
+    const autoLogin = async () => {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: 'test@xadrezarena.temp',
+          password: '123456',
+        });
+
+        if (error) {
+          console.error('Erro de auto login:', error);
+        } else if (data?.user) {
+          toast.success('Login automático realizado!');
+          onAuthChange(data.user);
+        }
+      } catch (error) {
+        console.error('Erro no auto login:', error);
+      }
+    };
+    
+    // Run auto login after a short delay
+    const timer = setTimeout(autoLogin, 1000);
+    return () => clearTimeout(timer);
+  }, [onAuthChange]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      // Teste a conexão primeiro
-      const isConnected = await testSupabaseConnection();
-      if (!isConnected) {
-        toast.error('Não foi possível conectar ao servidor. Verifique sua conexão com a internet.');
-        setLoading(false);
-        return;
-      }
-
       // Cria um email temporário baseado no nome do usuário se não fornecido
       const userEmail = email || `${username.replace(/\s+/g, '').toLowerCase()}@xadrezarena.temp`;
 
@@ -82,14 +86,6 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
     setLoading(true);
 
     try {
-      // Teste a conexão primeiro
-      const isConnected = await testSupabaseConnection();
-      if (!isConnected) {
-        toast.error('Não foi possível conectar ao servidor. Verifique sua conexão com a internet.');
-        setLoading(false);
-        return;
-      }
-
       // Verifica se o usuário forneceu um email completo ou apenas um nome de usuário
       const loginIdentifier = email.includes('@') ? email : `${email.replace(/\s+/g, '').toLowerCase()}@xadrezarena.temp`;
 
@@ -131,6 +127,14 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
             </AlertDescription>
           </Alert>
         )}
+        
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
+          <h3 className="font-medium text-green-700">Usuário de Teste Disponível</h3>
+          <p className="text-sm text-green-600 mt-1">
+            Para facilitar o teste, este aplicativo já possui um usuário automático.
+            Basta clicar em "Entrar" ou aguardar o login automático.
+          </p>
+        </div>
       
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -146,7 +150,6 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
                   placeholder="seu_nome ou email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
                 />
               </div>
               <div className="space-y-2">
@@ -157,7 +160,6 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
                   />
                   <Button 
                     type="button" 
@@ -172,6 +174,34 @@ const Authentication: React.FC<AuthProps> = ({ onAuthChange }) => {
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Entrando...' : 'Entrar'}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full mt-2"
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                      email: 'test@xadrezarena.temp',
+                      password: '123456',
+                    });
+                    
+                    if (error) {
+                      toast.error(`Erro: ${error.message}`);
+                    } else {
+                      toast.success('Login realizado com o usuário de teste!');
+                      onAuthChange(data.user);
+                    }
+                  } catch (error) {
+                    toast.error('Erro ao tentar login com usuário de teste.');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+              >
+                Usar Conta de Teste
               </Button>
             </form>
           </TabsContent>
