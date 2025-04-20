@@ -14,7 +14,12 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const Index: React.FC = () => {
   // Auth state
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  // Debugging log for auth state
+  useEffect(() => {
+    console.log('Auth state:', { user, loading });
+  }, [user, loading]);
   
   // App state
   const [gameStarted, setGameStarted] = useState(false);
@@ -79,6 +84,18 @@ const Index: React.FC = () => {
     }
   };
 
+  // Mostrar tela de carregamento enquanto verifica autenticação
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-200 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-4">XadrezArena</h1>
+          <p>Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Add default fallback if no user is logged in
   if (!user) {
     return (
@@ -86,6 +103,12 @@ const Index: React.FC = () => {
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-4">XadrezArena</h1>
           <p>Por favor, faça login para começar</p>
+          <GameSetup 
+            user={user}
+            gameMode={gameMode}
+            onPlayersSubmit={handlePlayersSubmit}
+            onAuthChange={handleAuthChange}
+          />
         </div>
       </div>
     );
