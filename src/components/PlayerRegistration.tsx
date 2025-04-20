@@ -5,17 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Player, PieceColor, GameMode } from '@/types/chess';
-import { createClient } from '@supabase/supabase-js';
 import { toast } from "@/components/ui/sonner";
 import { PlayerCompetition } from '@/types/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Valores de fallback para desenvolvimento
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
-
-// Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from '@/lib/supabase';
 
 interface PlayerRegistrationProps {
   onPlayersSubmit: (players: [Player, Player]) => void;
@@ -66,53 +59,84 @@ const PlayerRegistration: React.FC<PlayerRegistrationProps> = ({
         players.map(async (player) => {
           if (player.isComputer) return null;
 
-          // Check if player already exists
-          const { data: existingPlayer, error: fetchError } = await supabase
-            .from('player_competitions')
-            .select('*')
-            .eq('player_name', player.name)
-            .single();
+          try {
+            // Check if player already exists
+            const { data: existingPlayer, error: fetchError } = await supabase
+              .from('player_competitions')
+              .select('*')
+              .eq('player_name', player.name)
+              .single();
 
-          if (fetchError && fetchError.code !== 'PGRST116') {
-            toast.error(`Erro ao buscar jogador: ${fetchError.message}`);
+            if (fetchError && fetchError.code !== 'PGRST116') {
+              console.error('Erro ao buscar jogador:', fetchError);
+              return null;
+            }
+
+            if (existingPlayer) {
+              return existingPlayer;
+            }
+
+            // Create new player record if not exists
+            const { data: newPlayer, error: insertError } = await supabase
+              .from('player_competitions')
+              .insert({
+                player_name: player.name,
+                game_mode: gameMode,
+                wins: 0,
+                losses: 0,
+                draws: 0,
+                total_games: 0,
+                last_played: new Date(),
+                user_id: player.userId
+              })
+              .select()
+              .single();
+
+            if (insertError) {
+              throw insertError;
+            }
+
+            return newPlayer;
+          } catch (error) {
+            console.error('Erro ao processar jogador:', error);
+            toast.error(`Erro ao registrar jogador ${player.name}`);
             return null;
           }
-
-          if (existingPlayer) {
-            return existingPlayer;
-          }
-
-          // Create new player record if not exists
-          const { data: newPlayer, error: insertError } = await supabase
-            .from('player_competitions')
-            .insert({
-              player_name: player.name,
-              game_mode: gameMode,
-              wins: 0,
-              losses: 0,
-              draws: 0,
-              total_games: 0,
-              last_played: new Date(),
-              user_id: player.userId
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            toast.error(`Erro ao criar jogador: ${insertError.message}`);
-            return null;
-          }
-
-          return newPlayer;
         })
       );
 
-      // Proceed with game start
-      onPlayersSubmit(players);
-      toast.success('Jogadores registrados com sucesso!');
+      // Filter out null values (failed registrations)
+      const validRegistrations = playerCompetitions.filter(Boolean);
+      
+      if (validRegistrations.length > 0) {
+        // Proceed with game start
+        onPlayersSubmit(players);
+        toast.success('Jogadores registrados com sucesso!');
+      } else {
+        toast.error('Falha ao registrar jogadores no banco de dados, mas o jogo continuará.');
+        onPlayersSubmit(players);
+      }
     } catch (error) {
-      toast.error('Erro ao registrar jogadores');
-      console.error(error);
+      console.error('Erro ao registrar jogadores:', error);
+      toast.error('Erro ao conectar com o banco de dados. O jogo continuará sem salvar estatísticas.');
+      
+      // Allow the game to continue anyway
+      const players: [Player, Player] = [
+        {
+          name: whitePlayer || 'Jogador 1',
+          color: 'white',
+          isComputer: false,
+          userId: user?.id
+        },
+        {
+          name: gameMode === 'computer' ? 'Computador' : (blackPlayer || 'Jogador 2'),
+          color: 'black',
+          isComputer: gameMode === 'computer',
+          userId: gameMode === 'computer' ? null : user?.id
+        }
+      ];
+      
+      onPlayersSubmit(players);
     }
   };
   
