@@ -12,7 +12,7 @@ import { toast } from "@/components/ui/sonner";
 import { GameMode, Player } from '@/types/chess';
 import { useAuth } from '@/contexts/AuthContext';
 
-const Index = () => {
+const Index: React.FC = () => {
   // Auth state
   const { user } = useAuth();
   
@@ -30,6 +30,16 @@ const Index = () => {
     handleUndo, 
     handleNewGame 
   } = useChessGame(gameMode, players);
+  
+  // Debugging log to help diagnose rendering issues
+  useEffect(() => {
+    console.log('Index Component Rendered', { 
+      user, 
+      gameStarted, 
+      gameMode, 
+      players 
+    });
+  }, [user, gameStarted, gameMode, players]);
   
   // Change game mode
   const handleChangeGameMode = (mode: GameMode) => {
@@ -68,6 +78,18 @@ const Index = () => {
       toast.success(`Bem-vindo, ${authUser.email?.split('@')[0]}!`);
     }
   };
+
+  // Add default fallback if no user is logged in
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-200 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-4">XadrezArena</h1>
+          <p>Por favor, faça login para começar</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-200 py-8 px-4">
